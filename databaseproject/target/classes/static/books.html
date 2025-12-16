@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Books</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    h1 { margin-bottom: 6px; }
+    .nav a { margin-right: 12px; }
+    .wrap { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-top: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+    input { width: 100%; padding: 10px; margin: 6px 0 12px; }
+    button { padding: 10px 14px; cursor: pointer; }
+    .danger { background: #ffe5e5; border: 1px solid #ffb3b3; }
+  </style>
+</head>
+<body>
+
+  <h1>Books</h1>
+
+  <div class="nav">
+    <a href="/books.html"><b>Books</b></a>
+    <a href="/authors.html">Authors</a>
+    <a href="/publishers.html">Publishers</a>
+  </div>
+
+  <p>This page uses: GET /books, POST /books, DELETE /books/{id}</p>
+
+  <div class="wrap">
+
+    <!-- LEFT: ALL BOOKS -->
+    <div class="card">
+      <h2>All Books</h2>
+      <button onclick="loadBooks()">Refresh</button>
+      <div style="height:12px"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:70px;">ID</th>
+            <th>Title</th>
+            <th style="width:90px;">Year</th>
+            <th style="width:110px;">Delete</th>
+          </tr>
+        </thead>
+        <tbody id="bookRows"></tbody>
+      </table>
+    </div>
+
+    <!-- RIGHT: ADD BOOK -->
+    <div class="card">
+      <h2>Add a Book</h2>
+
+      <label>Title</label>
+      <input id="title" placeholder="Enter title" />
+
+      <label>ISBN</label>
+      <input id="isbn" placeholder="Enter ISBN (optional)" />
+
+      <label>Publish Year</label>
+      <input id="publishYear" placeholder="e.g. 2008" />
+
+      <label>Publisher ID</label>
+      <input id="publisherId" placeholder="e.g. 1" />
+
+      <label>Genre ID</label>
+      <input id="genreId" placeholder="e.g. 10" />
+
+      <button onclick="addBook()">Add Book</button>
+      <p id="msg"></p>
+    </div>
+
+  </div>
+
+<script>
+async function loadBooks() {
+  const res = await fetch("/books");
+  const books = await res.json();
+
+  const tbody = document.getElementById("bookRows");
+  tbody.innerHTML = "";
+
+  books.forEach(b => {
+    const tr = document.createElement("tr");
+
+    const idTd = document.createElement("td");
+    idTd.textContent = b.bookId;
+
+    const titleTd = document.createElement("td");
+    titleTd.textContent = b.title;
+
+    const yearTd = document.createElement("td");
+    yearTd.textContent = b.publishYear ?? "";
+
+    const delTd = document.createElement("td");
+    const btn = document.createElement("button");
+    btn.textContent = "Delete";
+    btn.className = "danger";
+    btn.onclick = () => deleteBook(b.bookId);
+    delTd.appendChild(btn);
+
+    tr.appendChild(idTd);
+    tr.appendChild(titleTd);
+    tr.appendChild(yearTd);
+    tr.appendChild(delTd);
+    tbody.appendChild(tr);
+  });
+}
+
+async function addBook() {
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+
+  const book = {
+    title: document.getElementById("title").value.trim(),
+    isbn: document.getElementById("isbn").value.trim() || null,
+    publishYear: document.getElementById("publishYear").value || null,
+    publisherId: document.getElementById("publisherId").value || null,
+    genreId: document.getElementById("genreId").value || null
+  };
+
+  if (!book.title) {
+    msg.textContent = "Title is required.";
+    return;
+  }
+
+  const res = await fetch("/books", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(book)
+  });
+
+  if (!res.ok) {
+    msg.textContent = "Failed to add book.";
+    return;
+  }
+
+  document.getElementById("title").value = "";
+  document.getElementById("isbn").value = "";
+  document.getElementById("publishYear").value = "";
+  document.getElementById("publisherId").value = "";
+  document.getElementById("genreId").value = "";
+
+  msg.textContent = "Book added!";
+  await loadBooks();
+}
+
+async function deleteBook(id) {
+  const res = await fetch(`/books/${id}`, { method: "DELETE" });
+  if (res.ok) {
+    await loadBooks();
+  } else {
+    alert("Delete failed (maybe referenced by BookAuthor).");
+  }
+}
+
+loadBooks();
+</script>
+
+</body>
+</html>
+
